@@ -29,7 +29,7 @@ npm run preview
 The static production website is generated in `dist/`.
 
 ## Deploy
-**Vercel:** Import this repository. Select Vite, build command `npm run build`, output directory `dist`.
+**Vercel (recommended for AI chat):** Import this repository. Select Vite, build command `npm run build`, output directory `dist`. The `/api/chat.js` serverless function is the secure AI backend. In Vercel → Project → Settings → Environment Variables, add `GEMINI_API_KEY` with your Google Gemini API key, select Production (and Preview if needed), save, then redeploy. Get a key from https://aistudio.google.com/apikey. Never put the key in frontend code or commit it to GitHub. The chat will return a setup message until the key is configured.
 
 **Netlify:** Import this repository. Build command `npm run build`, publish directory `dist`.
 
@@ -46,7 +46,7 @@ The static production website is generated in `dist/`.
 ## Important limitations and privacy
 - The free translation endpoint has usage limits and no production SLA. Do not submit passwords, private chats, or sensitive data.
 - Roman Urdu is transliteration; the free service may return Urdu script. Local model output can also be imperfect.
-- Free-mode chat is only a limited helper; real AI chat requires a reachable Ollama instance.
+- AI Chat calls the server-side `/api/chat` endpoint, which uses Gemini 2.5 Flash and instructs the model to answer in the user's language/script (including Roman Urdu in Latin letters). On Vercel, configure `GEMINI_API_KEY` as a server environment variable. The API key is not sent to the browser. Gemini usage limits and pricing depend on Google's current plan/quota.
 - Translation history is saved in browser localStorage on that device.
 - This starter does not automatically read WhatsApp/Instagram screens.
 
