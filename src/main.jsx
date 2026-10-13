@@ -41,13 +41,66 @@ function App(){
   }catch(e){setError((e.message||'Translation failed')+' For privacy, avoid sending sensitive text to online translation services.');}
   finally{setBusy(false)}
  }
+ function detectChatLanguage(q){
+  const s=q.toLowerCase();
+  if(/[\u0600-\u06FF]/.test(q))return 'ur';
+  if(/[çğıöşü]/i.test(q)||/\b(merhaba|nasılsın|nasilsin|teşekkür|tesekkur|lütfen|lutfen|evet|hayır|hayir|neden|nasıl|nasil)\b/.test(s))return 'tr';
+  if(/\b(kya|kaise|kaisa|ho|hain|hai|mera|meri|mujhe|ap|aap|tum|tumhara|tumhari|kyun|kahan|kab|acha|achha|shukriya|salam|assalam|walaikum|batao|btao|karna|karo|chahiye|nahi|nahin|haan|han|theek|thik|bhai|yaar|aur|mein|main|kese|kesy|kia|kiya)\b/.test(s))return 'roman';
+  return 'en';
+ }
+ function freeChatReply(q){
+  const lang=detectChatLanguage(q),s=q.toLowerCase();
+  const greeting=/\b(hi|hello|hey|salam|assalam|salaam|aoa|merhaba|selam)\b/.test(s);
+  const how=/\b(how are you|kaise ho|kese ho|kesy ho|kya haal|nasılsın|nasilsin)\b/.test(s);
+  const who=/\b(who are you|tum kon|aap kon|ap kon|tum kaun|what are you)\b/.test(s);
+  const thanks=/\b(thanks|thank you|shukriya|shukria|teşekkür|tesekkur)\b/.test(s);
+  const help=/\b(help|madad|kya kar sakte|what can you do|yardım)\b/.test(s);
+  if(lang==='roman'){
+   if(greeting)return 'Wa Alaikum Assalam! 😊 Ji, batayein aap ko kis cheez mein madad chahiye? Main Roman Urdu mein jawab dunga.';
+   if(how)return 'Alhamdulillah, main theek hoon! 😊 Aap sunayein, aap ko kis cheez mein madad chahiye?';
+   if(who)return 'Main Muhammad Afnan AI hoon. Main translation aur language help de sakta hoon. Har topic par detailed AI jawab ke liye Settings mein Local Ollama ka working server aur model connect karein.';
+   if(thanks)return 'Khushi hui madad karke! 😊 Aur kuch poochna ho to zaroor batayein.';
+   if(help)return 'Main English, Turkish, Urdu aur Roman Urdu mein translation aur language help kar sakta hoon. Detailed AI jawab ke liye Settings mein Local Ollama ka working server URL aur model set karein.';
+   return 'Aap ka message mil gaya. Abhi Free mode mein full AI model connected nahi hai, is liye main har sawal ka reliable detailed jawab nahi bana sakta. Settings mein Local Ollama ko working AI server se connect karein, ya Translator tab mein text translate karein.';
+  }
+  if(lang==='ur'){
+   if(greeting)return 'وعلیکم السلام! 😊 جی بتائیے، آپ کو کس چیز میں مدد چاہیے؟';
+   if(how)return 'الحمدللہ، میں ٹھیک ہوں! 😊 آپ سنائیں، میں آپ کی کیا مدد کر سکتا ہوں؟';
+   if(who)return 'میں محمد افنان AI ہوں۔ میں ترجمے اور زبان سے متعلق مدد کر سکتا ہوں۔ تفصیلی AI جوابات کے لیے Settings میں فعال Ollama سرور اور ماڈل منسلک کریں۔';
+   if(thanks)return 'خوشی ہوئی کہ میں مدد کر سکا! 😊 مزید کچھ پوچھنا ہو تو بتائیے۔';
+   if(help)return 'میں انگریزی، ترکی، اردو اور رومن اردو کے ترجمے میں مدد کر سکتا ہوں۔ تفصیلی AI جوابات کے لیے Settings میں فعال Ollama سرور اور ماڈل سیٹ کریں۔';
+   return 'آپ کا پیغام موصول ہوا۔ ابھی Free mode میں مکمل AI ماڈل منسلک نہیں ہے، اس لیے میں ہر سوال کا قابلِ اعتماد تفصیلی جواب نہیں دے سکتا۔ Settings میں فعال Ollama سرور منسلک کریں، یا Translator ٹیب استعمال کریں۔';
+  }
+  if(lang==='tr'){
+   if(greeting)return 'Merhaba! 😊 Size nasıl yardımcı olabilirim?';
+   if(how)return 'İyiyim, teşekkür ederim! 😊 Size nasıl yardımcı olabilirim?';
+   if(who)return 'Ben Muhammad Afnan AI. Çeviri ve dil konusunda yardımcı olabilirim. Ayrıntılı yapay zekâ yanıtları için Ayarlar bölümünden çalışan bir Ollama sunucusu ve model bağlayın.';
+   if(thanks)return 'Rica ederim! 😊 Başka bir konuda yardımcı olabilir miyim?';
+   if(help)return 'İngilizce, Türkçe, Urduca ve Roman Urdu arasında çeviri yapabilirim. Ayrıntılı yapay zekâ yanıtları için Ayarlar bölümünde çalışan bir Ollama sunucusu yapılandırın.';
+   return 'Mesajınızı aldım. Ücretsiz modda tam bir yapay zekâ modeli bağlı değil; bu yüzden her soruya güvenilir ve ayrıntılı yanıt veremem. Ayarlar bölümünden çalışan bir Ollama sunucusu bağlayın veya Çeviri sekmesini kullanın.';
+  }
+  if(greeting)return 'Hello! 😊 How can I help you today?';
+  if(how)return 'I’m doing well, thank you! 😊 What can I help you with?';
+  if(who)return 'I’m Muhammad Afnan AI. I can help with translation and language questions. For detailed AI answers on any topic, connect a working Ollama server and model in Settings.';
+  if(thanks)return 'You’re welcome! 😊 Let me know if you need anything else.';
+  if(help)return 'I can help translate between English, Turkish, Urdu and Roman Urdu. For detailed AI answers on general topics, configure a working Ollama server in Settings.';
+  return 'I received your message. Full AI chat is not connected in Free mode, so I cannot reliably generate detailed answers to every question yet. Connect a working AI server and model in Settings → Local Ollama, or use the Translator tab.';
+ }
  async function sendChat(){
-  const q=chatInput.trim();if(!q)return;setChatInput('');setChat(c=>[...c,{role:'user',text:q}]);
+  const q=chatInput.trim();if(!q)return;setChatInput('');
+  const next=[...chat,{role:'user',text:q}];setChat(next);
   if(provider==='ollama'){
-   try{const r=await fetch(ollamaUrl.replace(/\/$/,'')+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages:[...chat,{role:'user',content:q}].map(m=>({role:m.role==='assistant'?'assistant':'user',content:m.text})),stream:false}),signal:AbortSignal.timeout(60000)});if(!r.ok)throw new Error('Ollama connection failed');const d=await r.json();setChat(c=>[...c,{role:'assistant',text:d.message?.content||'No response'}]);}
-   catch(e){setChat(c=>[...c,{role:'assistant',text:'Could not reach local Ollama. Open Settings and check the URL, model, and CORS configuration.'}]);}
+   try{
+    const r=await fetch(ollamaUrl.replace(/\/$/,'')+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages:next.map(m=>({role:m.role==='assistant'?'assistant':'user',content:m.text})),stream:false}),signal:AbortSignal.timeout(60000)});
+    if(!r.ok)throw new Error('Ollama connection failed');
+    const d=await r.json();setChat(c=>[...c,{role:'assistant',text:d.message?.content||'No response'}]);
+   }catch(e){
+    const lang=detectChatLanguage(q);
+    const msg=lang==='roman'?'Ollama server se connection nahi ho saka. Settings mein server URL, model aur CORS check karein.':lang==='ur'?'Ollama سرور سے رابطہ نہیں ہو سکا۔ Settings میں سرور URL، ماڈل اور CORS چیک کریں۔':lang==='tr'?'Ollama sunucusuna bağlanılamadı. Ayarlar bölümündeki URL, model ve CORS ayarlarını kontrol edin.':'Could not connect to Ollama. Check the server URL, model, and CORS settings in Settings.';
+    setChat(c=>[...c,{role:'assistant',text:msg}]);
+   }
   }else{
-   setChat(c=>[...c,{role:'assistant',text:`Hi! I’m Muhammad Afnan AI. I can help with English, Turkish, Urdu and Roman Urdu translation. For an actual AI conversation, choose Local Ollama in Settings and run a model. You can translate text in the Translate tab.`}]);
+   setChat(c=>[...c,{role:'assistant',text:freeChatReply(q)}]);
   }
  }
  async function copy(text){try{await navigator.clipboard.writeText(text)}catch{setError('Clipboard unavailable. Please select and copy the text manually.')}}
