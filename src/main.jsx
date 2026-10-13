@@ -14,7 +14,7 @@ function App(){
  const [source,setSource]=useState('en'),[target,setTarget]=useState('ur');
  const [input,setInput]=useState(''),[result,setResult]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [history,setHistory]=useState(()=>{try{return JSON.parse(localStorage.getItem('afnan-history')||'[]')}catch{return[]}});
- const [chat,setChat]=useState([]),[chatInput,setChatInput]=useState('');
+ const [chat,setChat]=useState([]),[chatInput,setChatInput]=useState(''),[chatBusy,setChatBusy]=useState(false);
  const [provider,setProvider]=useState('free');
  const [ollamaUrl,setOllamaUrl]=useState('http://localhost:11434');
  const [model,setModel]=useState('qwen2.5:3b');
@@ -87,21 +87,22 @@ function App(){
   return 'I received your message. Full AI chat is not connected in Free mode, so I cannot reliably generate detailed answers to every question yet. Connect a working AI server and model in Settings → Local Ollama, or use the Translator tab.';
  }
  async function sendChat(){
-  const q=chatInput.trim();if(!q)return;setChatInput('');
-  const next=[...chat,{role:'user',text:q}];setChat(next);
-  if(provider==='ollama'){
-   try{
-    const r=await fetch(ollamaUrl.replace(/\/$/,'')+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages:next.map(m=>({role:m.role==='assistant'?'assistant':'user',content:m.text})),stream:false}),signal:AbortSignal.timeout(60000)});
-    if(!r.ok)throw new Error('Ollama connection failed');
-    const d=await r.json();setChat(c=>[...c,{role:'assistant',text:d.message?.content||'No response'}]);
-   }catch(e){
-    const lang=detectChatLanguage(q);
-    const msg=lang==='roman'?'Ollama server se connection nahi ho saka. Settings mein server URL, model aur CORS check karein.':lang==='ur'?'Ollama سرور سے رابطہ نہیں ہو سکا۔ Settings میں سرور URL، ماڈل اور CORS چیک کریں۔':lang==='tr'?'Ollama sunucusuna bağlanılamadı. Ayarlar bölümündeki URL, model ve CORS ayarlarını kontrol edin.':'Could not connect to Ollama. Check the server URL, model, and CORS settings in Settings.';
-    setChat(c=>[...c,{role:'assistant',text:msg}]);
-   }
-  }else{
-   setChat(c=>[...c,{role:'assistant',text:freeChatReply(q)}]);
-  }
+  const q=chatInput.trim();if(!q||chatBusy)return;setChatInput('');
+  const next=[...chat,{role:'user',text:q}];setChat(next);setChatBusy(true);
+  try{
+   const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:next.slice(-12)}),signal:AbortSignal.timeout(50000)});
+   const data=await r.json().catch(()=>({}));
+   if(!r.ok)throw new Error(data.error||'AI service is unavailable. Please try again.');
+   if(!data.reply)throw new Error('AI ne jawab nahi bheja. Dobara koshish karein.');
+   setChat(c=>[...c,{role:'assistant',text:data.reply}]);
+  }catch(e){
+   const lang=detectChatLanguage(q);
+   let msg=e.message||'Chat request failed. Please try again.';
+   if(lang==='roman' && /failed to fetch|networkerror|load failed/i.test(msg))msg='AI backend tak connection nahi ho saka. Website ko Vercel par deploy karein aur GEMINI_API_KEY environment variable set karein.';
+   else if(lang==='ur' && /failed to fetch|networkerror|load failed/i.test(msg))msg='AI سرور سے رابطہ نہیں ہو سکا۔ ویب سائٹ کو Vercel پر deploy کریں اور GEMINI_API_KEY سیٹ کریں۔';
+   else if(lang==='tr' && /failed to fetch|networkerror|load failed/i.test(msg))msg='AI sunucusuna bağlanılamadı. Siteyi Vercel üzerinde dağıtın ve GEMINI_API_KEY değişkenini ayarlayın.';
+   setChat(c=>[...c,{role:'assistant',text:msg}]);
+  }finally{setChatBusy(false)}
  }
  async function copy(text){try{await navigator.clipboard.writeText(text)}catch{setError('Clipboard unavailable. Please select and copy the text manually.')}}
  async function share(text){if(navigator.share){try{await navigator.share({title:'Muhammad Afnan AI translation',text})}catch{}}else copy(text)}
@@ -121,7 +122,7 @@ function App(){
     {result&&<div className="result"><div className="result-head"><span>TRANSLATION · {labels[target]}</span><div><button className="iconbtn" onClick={()=>copy(result)} title="Copy"><Copy size={17}/></button><button className="iconbtn" onClick={()=>share(result)} title="Share"><Share2 size={17}/></button></div></div><p dir={target==='ur'?'rtl':'auto'} className={target==='ur'?'urdu':''}>{result}</p></div>}
     <div className="quick"><span>Try an example</span><button onClick={()=>{setSource('en');setTarget('ur');setInput('How are you?');setResult('')}}>How are you?</button><button onClick={()=>{setSource('en');setTarget('tr');setInput('Thank you very much');setResult('')}}>Thank you</button></div>
    </section>}
-   {mode==='chat'&&<section className="panel chatpanel"><div className="chatlog">{chat.length===0&&<div className="empty"><div className="logo"><MessageCircle/></div><h3>Chat with Afnan AI</h3><p>Ask for translation help, wording, or language tips.</p></div>}{chat.map((m,i)=><div key={i} className={'bubble '+m.role}>{m.text}</div>)}</div><form onSubmit={e=>{e.preventDefault();sendChat()}} className="chatform"><input value={chatInput} onChange={e=>setChatInput(e.target.value)} placeholder="Ask something…"/><button className="primary send" disabled={!chatInput.trim()}><Send size={18}/></button></form><p className="hint">A real AI chat requires Local Ollama to be configured. Free mode provides translation-service guidance only.</p></section>}
+   {mode==='chat'&&<section className="panel chatpanel"><div className="chatlog">{chat.length===0&&<div className="empty"><div className="logo"><MessageCircle/></div><h3>Chat with Afnan AI</h3><p>Ask for translation help, wording, or language tips.</p></div>}{chat.map((m,i)=><div key={i} className={'bubble '+m.role}>{m.text}</div>)}</div><form onSubmit={e=>{e.preventDefault();sendChat()}} className="chatform"><input value={chatInput} onChange={e=>setChatInput(e.target.value)} placeholder="Ask something…"/><button className="primary send" disabled={!chatInput.trim()||chatBusy}>{chatBusy?'Thinking…':<Send size={18}/>}</button></form><p className="hint">AI chat uses a secure server-side Gemini API. The deployment owner must configure GEMINI_API_KEY; the secret is never placed in browser code.</p></section>}
    {mode==='history'&&<section className="panel"><div className="historyhead"><h3>Recent translations</h3><button className="textbtn" onClick={()=>{setHistory([]);localStorage.removeItem('afnan-history')}}>Clear history</button></div>{history.length===0?<div className="empty"><History size={30}/><p>Your translations will appear here.</p></div>:history.map((h,i)=><article className="historyitem" key={i}><div className="hint">{labels[h.source]} → {labels[h.target]}</div><p>{h.input}</p><p className="muted">{h.output}</p><button className="textbtn" onClick={()=>{setSource(h.source);setTarget(h.target);setInput(h.input);setResult(h.output);setMode('translate')}}>Open translation</button></article>)}</section>}
    <section className="feature-grid"><div><Globe/><b>4 languages</b><span>English · Türkçe · اردو · Roman Urdu</span></div><div><Copy/><b>Copy & share</b><span>Move translations into your apps</span></div><div><Mic/><b>Voice-ready</b><span>Voice input can be added next</span></div></section>
    <footer>Muhammad Afnan AI <span>·</span> Built for clear communication</footer>
