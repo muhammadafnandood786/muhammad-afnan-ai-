@@ -8,15 +8,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(503).json({
-      error: 'AI backend is not configured yet. Add GEMINI_API_KEY in the Vercel project environment variables, then redeploy.'
-    });
-  }
-
   try {
     const body = req.body || {};
+    // A user may provide their own key in the app's password field. It is used
+    // only for this request and is never written to storage or logs.
+    const apiKey = (typeof body.apiKey === 'string' ? body.apiKey.trim() : '') || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({
+        error: 'Add your Gemini API key in Settings, or configure GEMINI_API_KEY on the server.'
+      });
+    }
     const messages = Array.isArray(body.messages) ? body.messages.slice(-12) : [];
     if (!messages.length) return res.status(400).json({ error: 'Please send a message.' });
 
